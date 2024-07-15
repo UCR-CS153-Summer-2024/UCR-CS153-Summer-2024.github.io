@@ -22,7 +22,7 @@ rubrics_part1 = r"""
   note: "[getsiblings] getsiblings succeeded on returning zero siblings"
   name: "getsiblings - zero siblings"
 
-- points: 0
+- points: 25
   note: "[getsiblings] getsiblings failed"
   name: "getsiblings - failed"
 """
@@ -146,5 +146,5 @@ def run_test(code, program, rubrics, points):
 
     return points
 
-point1 = run_test(code_test_part1, "lab1_part1", rubrics_part1, 0)
+point1 = run_test(code_test_part1, "test_getsiblings", rubrics_part1, 0)
 # point34 = run_test(code_test_part34, "lab1_part34", rubrics_part34, 0)
