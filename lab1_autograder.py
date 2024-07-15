@@ -4,27 +4,34 @@ import re
 from pwn import *
 
 rubrics_part1 = r"""
-- points: 10
+- points: 0
   cmd: "test_getsiblings 2"
   expect: "5\n6"
   note: "[getsiblings] getsiblings succeeded on returning two siblings"
   name: "getsiblings - two siblings"
-
 - points: 10
+  note: "[getsiblings] getsiblings failed for two siblings"
+  name: "getsiblings - two siblings"
+
+- points: 0
   cmd: "test_getsiblings 1"
-  expect: "10"
+  expect: "10\n"
   note: "[getsiblings] getsiblings succeeded on returning one sibling"
   name: "getsiblings - one sibling"
+- points: 10
+  cmd: "test_getsiblings 1"
+  note: "[getsiblings] getsiblings failed for one sibling"
+  name: "getsiblings - one sibling"
 
-- points: 5
+- points: 0
   cmd: "test_getsiblings 0"
   expect: ""
   note: "[getsiblings] getsiblings succeeded on returning zero siblings"
   name: "getsiblings - zero siblings"
-
-- points: 25
-  note: "[getsiblings] getsiblings failed"
-  name: "getsiblings - failed"
+- points: 5
+  cmd: "test_getsiblings 0"
+  note: "[getsiblings] getsiblings failed for zero siblings"
+  name: "getsiblings - zero siblings"
 """
 
 rubrics_part234 = r"""
@@ -146,5 +153,5 @@ def run_test(code, program, rubrics, points):
 
     return points
 
-point1 = run_test(code_test_part1, "test_getsiblings", rubrics_part1, 0)
+point1 = run_test(code_test_part1, "test_getsiblings", rubrics_part1, 25)
 # point34 = run_test(code_test_part34, "lab1_part34", rubrics_part34, 0)
