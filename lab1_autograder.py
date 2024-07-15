@@ -40,7 +40,7 @@ rubrics_part234 = r"""
 rubrics_part5 = r"""
 - points: 15
   cmd: "test_waitpid"
-  expect: "0\n1\n-1"
+  expect: "0 1 -1"
   note: "[waitpid] test for waitpid failed"
   name: "waitpid - test"
 """
