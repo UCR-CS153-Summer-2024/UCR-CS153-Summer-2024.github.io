@@ -3,7 +3,31 @@ import base64
 import re
 from pwn import *
 
-rubrics_part34 = r"""
+rubrics_part1 = r"""
+- points: 10
+  cmd: "test_getsiblings 2"
+  expect: "5\n6"
+  note: "[getsiblings] getsiblings succeeded on returning two siblings"
+  name: "getsiblings - two siblings"
+
+- points: 10
+  cmd: "test_getsiblings 1"
+  expect: "10"
+  note: "[getsiblings] getsiblings succeeded on returning one sibling"
+  name: "getsiblings - one sibling"
+
+- points: 5
+  cmd: "test_getsiblings 0"
+  expect: ""
+  note: "[getsiblings] getsiblings succeeded on returning zero siblings"
+  name: "getsiblings - zero siblings"
+
+- points: 0
+  note: "[getsiblings] getsiblings failed"
+  name: "getsiblings - failed"
+"""
+
+rubrics_part234 = r"""
 - points: 12.5
   cmd: "test_part34 1"
   expect: "4 0"
@@ -58,6 +82,8 @@ rubrics_part34 = r"""
   name: "Exit & Wait - Wait for a child process that does not exist"
 
 """
+
+code_test_part1 = """I2luY2x1ZGUgInR5cGVzLmgiCiNpbmNsdWRlICJ1c2VyLmgiCgppbnQgdGVzdF90d29fc2licygpIHsKICAgIGludCB3YWl0X3N0YXR1czsKCiAgICBpbnQgY2hpbGQx="""
 
 code_test_part34 = """"I2luY2x1ZGUgInR5cGVzLmgiCiNpbmNsdWRlICJ1c2VyLmgiCgppbnQgbWFpbihpbnQgYXJnYywgY2hhciAqYXJndltdKQp7CiAgICBpbnQgZXhpdFdhaXQodm9pZCk7CiAgICBpbnQgd2FpdE5vdGhpbmcodm9pZCk7CgogICAgcHJpbnRmKDEsICJcbmxhYiMxXG4iKTsKICAgIGlmIChhdG9pKGFyZ3ZbMV0pID09IDEpCiAgICAgICAgZXhpdFdhaXQoKTsgIAogICAgZWxzZSBpZiAoYXRvaShhcmd2WzFdKSA9PSAyKQogICAgICAgIHdhaXROb3RoaW5nKCk7CiAgICAvLyBFbmQgb2YgdGVzdAogICAgLy8gZXhpdCgwKTsKICAgIHJldHVybiAwOwp9CgoKaW50IHdhaXROb3RoaW5nKHZvaWQpewogICAgaW50IHJldCwgZXhpdF9zdGF0dXMgPSAtMTsKICAgIHJldCA9IHdhaXQoJmV4aXRfc3RhdHVzKTsKICAgIHByaW50ZigxLCAiJWQgJWRcbiIsIHJldCwgZXhpdF9zdGF0dXMpOwogICAgcmV0dXJuIDA7Cn0KCmludCBleGl0V2FpdCh2b2lkKSB7CiAgICBpbnQgcGlkLCByZXRfcGlkLCBleGl0X3N0YXR1czsKICAgIGludCBpOwoKICAgIGZvciAoaSA9IDA7IGkgPCAyOyBpKyspIHsKICAgICAgICBwaWQgPSBmb3JrKCk7CiAgICAgICAgaWYgKHBpZCA9PSAwKSB7IC8vIG9ubHkgdGhlIGNoaWxkIGV4ZWN1dGVkIHRoaXMgY29kZQogICAgICAgICAgICBpZiAoaSA9PSAwKXsKICAgICAgICAgICAgICAgIHByaW50ZigxLCAiJWQgJWRcbiIsIGdldHBpZCgpLCAwKTsKICAgICAgICAgICAgICAgIGV4aXQoMCk7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxzZXsKICAgICAgICAgICAgICAgIHByaW50ZigxLCAiJWQgJWRcbiIgLGdldHBpZCgpLCAtMSk7CiAgICAgICAgICAgICAgICBleGl0KC0xKTsKICAgICAgICAgICAgfSAKICAgICAgICB9IGVsc2UgaWYgKHBpZCA+IDApIHsgLy8gb25seSB0aGUgcGFyZW50IGV4ZWN1dGVzIHRoaXMgY29kZQogICAgICAgICAgICByZXRfcGlkID0gd2FpdCgmZXhpdF9zdGF0dXMpOwogICAgICAgICAgICBwcmludGYoMSwgIiVkKyVkXG4iLCByZXRfcGlkLCBleGl0X3N0YXR1cyk7CiAgICAgICAgfSBlbHNlIHsgLy8gc29tZXRoaW5nIHdlbnQgd3Jvbmcgd2l0aCBmb3JrIHN5c3RlbSBjYWxsCiAgICAgICAgICAgIHByaW50ZigyLCAiXG5FcnJvciB1c2luZyBmb3JrXG4iKTsKICAgICAgICAgICAgZXhpdCgtMSk7CiAgICAgICAgfQogICAgfQogICAgcmV0dXJuIDA7Cn0="""
 
@@ -120,4 +146,5 @@ def run_test(code, program, rubrics, points):
 
     return points
 
-point34 = run_test(code_test_part34, "lab1_part34", rubrics_part34, 0)
+point1 = run_test(code_test_part1, "lab1_part1", rubrics_part1, 0)
+# point34 = run_test(code_test_part34, "lab1_part34", rubrics_part34, 0)
