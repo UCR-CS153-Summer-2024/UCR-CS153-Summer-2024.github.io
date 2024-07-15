@@ -1,10 +1,9 @@
-name: Lab#1 Autograder
+name: Lab 1 Autograder
 
 on:
   push:
     branches:
-      - main
-  workflow_dispatch:
+      - master
 
 jobs:
   run-script:
