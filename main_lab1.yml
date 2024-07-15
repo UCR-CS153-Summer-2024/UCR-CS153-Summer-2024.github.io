@@ -1,0 +1,41 @@
+name: Lab#1 Autograder
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install pip dependencies
+      run: |
+        pip install pwntools
+        pip install pwntools PyYAML
+
+    - name: Install QEMU
+      run: |
+        sudo apt-get update >/dev/null 2>&1 && sudo apt-get install -y qemu-system-i386 >/dev/null 2>&1
+
+    - name: Download and run script
+      run: |
+        wget https://raw.githubusercontent.com/UCR-CS153-Summer-2024/UCR-CS153-Summer-2024.github.io/main/run_lab1.sh
+        bash ./run_lab1.sh
+
+    - name: Clean up
+      run: |
+        rm -f lab1_autograder.py
+        rm -f test_getsiblings.c
+        rm -f test_exit_wait.c
+        rm -f test_waitpid.c
