@@ -13,14 +13,12 @@ int main() {
     int child2_pid = fork();
     if (child2_pid == 0) {
         sleep(100);
-        //getsiblings();
         exit(0);                // Exit status added (lab1-part3)
     }
 
     int child3_pid = fork();
     if (child3_pid == 0) {
         sleep(100);
-        //getsiblings();
         exit(0);                // Exit status added (lab1-part3)
     }
 

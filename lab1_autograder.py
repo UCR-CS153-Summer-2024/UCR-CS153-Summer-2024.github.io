@@ -3,20 +3,63 @@ import base64
 import re
 from pwn import *
 
-rubrics_getsiblings = r"""
-- points: 0
-  cmd: "test_getsiblings"
-  expect: "1"
-  note: "[getsiblings] getsiblings system call failed"
-  name: "getsiblings - fail"
+rubrics_part34 = r"""
+- points: 12.5
+  cmd: "test_part34 1"
+  expect: "4 0"
+  note: "Fork failed"
+  name: "Exit & Wait - Fork first child process"
 
-- points: 25
-  expect: "0"
-  note: "[getsiblings] getsiblings system call succeeded"
-  name: "getsiblings - successful"
+- points: 12.5
+  expect: "4+0"
+  note: "[Exit & Wait]Failed to obtain correct first child process exit status"
+  name: "Exit & Wait - Wait for first child process"
+
+- points: 12.5
+  expect: "5 -1"
+  note: "[Exit & Wait]Fork second child process failed"
+  name: "Exit & Wait - Fork second child process"
+
+- points: 12.5
+  expect: "5+-1"
+  note: "[Exit & Wait]Failed to obtain correct second child process exit status"
+  name: "Exit & Wait - Wait for second child process"
+
+- points: 0
+  cmd: "test_part34 2"
+  expect: "12 16"
+  note: "[Waitpid]Failed to create 6 child processes"
+  name: "Waitpid - create 6 child processes"
+
+- points: 5
+  expect: "10\n10+14+14\n8\n8+12+12\n9\n9+13+13\n7\n7+11+11\n11\n11+15+15"
+  note: "[Waitpid]Child process exit status is incorrect"
+  name: "Waitpid - check 5 child processes exit status"
+
+- points: 5
+  expect: "12\n-1+12+-1"
+  note: "[Waitpid]Syscall does not return -1 while obtaining status of an process that's not a child of the current process"
+  name: "Waitpid - check invalid process"
+
+- points: 5
+  expect: "-1"
+  note: "[Waitpid]Syscall does not return -1 while obtaining status of an invalid process"
+  name: "Waitpid - check invalid process"
+
+- points: 5
+  expect: "-1"
+  note : "[Waitpid]Syscall does not return -1 when an invalid argument is given"
+  name: "Waitpid - check invalid argument"
+
+- points: 5
+  cmd: "test_part34 3"
+  expect: "-1 -1"
+  note: "[Exit & Wait]Should return -1 for a child process that does not exist"
+  name: "Exit & Wait - Wait for a child process that does not exist"
+
 """
 
-code_test_getsiblings = """I2luY2x1ZGUgInR5cGVzLmgiCiNpbmNsdWRlIC ..."""
+code_test_part34 = """"I2luY2x1ZGUgInR5cGVzLmgiCiNpbmNsdWRlICJ1c2VyLmgiCgppbnQgbWFpbihpbnQgYXJnYywgY2hhciAqYXJndltdKQp7CiAgICBpbnQgZXhpdFdhaXQodm9pZCk7CiAgICBpbnQgd2FpdE5vdGhpbmcodm9pZCk7CgogICAgcHJpbnRmKDEsICJcbmxhYiMxXG4iKTsKICAgIGlmIChhdG9pKGFyZ3ZbMV0pID09IDEpCiAgICAgICAgZXhpdFdhaXQoKTsgIAogICAgZWxzZSBpZiAoYXRvaShhcmd2WzFdKSA9PSAyKQogICAgICAgIHdhaXROb3RoaW5nKCk7CiAgICAvLyBFbmQgb2YgdGVzdAogICAgLy8gZXhpdCgwKTsKICAgIHJldHVybiAwOwp9CgoKaW50IHdhaXROb3RoaW5nKHZvaWQpewogICAgaW50IHJldCwgZXhpdF9zdGF0dXMgPSAtMTsKICAgIHJldCA9IHdhaXQoJmV4aXRfc3RhdHVzKTsKICAgIHByaW50ZigxLCAiJWQgJWRcbiIsIHJldCwgZXhpdF9zdGF0dXMpOwogICAgcmV0dXJuIDA7Cn0KCmludCBleGl0V2FpdCh2b2lkKSB7CiAgICBpbnQgcGlkLCByZXRfcGlkLCBleGl0X3N0YXR1czsKICAgIGludCBpOwoKICAgIGZvciAoaSA9IDA7IGkgPCAyOyBpKyspIHsKICAgICAgICBwaWQgPSBmb3JrKCk7CiAgICAgICAgaWYgKHBpZCA9PSAwKSB7IC8vIG9ubHkgdGhlIGNoaWxkIGV4ZWN1dGVkIHRoaXMgY29kZQogICAgICAgICAgICBpZiAoaSA9PSAwKXsKICAgICAgICAgICAgICAgIHByaW50ZigxLCAiJWQgJWRcbiIsIGdldHBpZCgpLCAwKTsKICAgICAgICAgICAgICAgIGV4aXQoMCk7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxzZXsKICAgICAgICAgICAgICAgIHByaW50ZigxLCAiJWQgJWRcbiIgLGdldHBpZCgpLCAtMSk7CiAgICAgICAgICAgICAgICBleGl0KC0xKTsKICAgICAgICAgICAgfSAKICAgICAgICB9IGVsc2UgaWYgKHBpZCA+IDApIHsgLy8gb25seSB0aGUgcGFyZW50IGV4ZWN1dGVzIHRoaXMgY29kZQogICAgICAgICAgICByZXRfcGlkID0gd2FpdCgmZXhpdF9zdGF0dXMpOwogICAgICAgICAgICBwcmludGYoMSwgIiVkKyVkXG4iLCByZXRfcGlkLCBleGl0X3N0YXR1cyk7CiAgICAgICAgfSBlbHNlIHsgLy8gc29tZXRoaW5nIHdlbnQgd3Jvbmcgd2l0aCBmb3JrIHN5c3RlbSBjYWxsCiAgICAgICAgICAgIHByaW50ZigyLCAiXG5FcnJvciB1c2luZyBmb3JrXG4iKTsKICAgICAgICAgICAgZXhpdCgtMSk7CiAgICAgICAgfQogICAgfQogICAgcmV0dXJuIDA7Cn0="""
 
 def populate_makefile(filename):
     c = open('Makefile', 'r').read().replace(" -Werror", " ")
@@ -77,4 +120,4 @@ def run_test(code, program, rubrics, points):
 
     return points
 
-point1 = run_test(code_test_getsiblings, "lab1_part1_getsiblings", rubrics_getsiblings, 0)
+point34 = run_test(code_test_part34, "lab1_part34", rubrics_part34, 0)
