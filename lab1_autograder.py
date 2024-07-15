@@ -4,95 +4,52 @@ import re
 from pwn import *
 
 rubrics_part1 = r"""
-- points: 0
+- points: 10
   cmd: "test_getsiblings 2"
   expect: "5\n6"
-  note: "[getsiblings] getsiblings succeeded on returning two siblings"
-  name: "getsiblings - two siblings"
-- points: 10
-  note: "[getsiblings] getsiblings failed for two siblings"
+  note: "[getsiblings] getsiblings failed on returning two siblings"
   name: "getsiblings - two siblings"
 
-- points: 0
-  cmd: "test_getsiblings 1"
-  expect: "10\n"
-  note: "[getsiblings] getsiblings succeeded on returning one sibling"
-  name: "getsiblings - one sibling"
 - points: 10
   cmd: "test_getsiblings 1"
-  note: "[getsiblings] getsiblings failed for one sibling"
+  expect: "10"
+  note: "[getsiblings] getsiblings failed on returning one sibling"
   name: "getsiblings - one sibling"
 
-- points: 0
-  cmd: "test_getsiblings 0"
-  expect: ""
-  note: "[getsiblings] getsiblings succeeded on returning zero siblings"
-  name: "getsiblings - zero siblings"
 - points: 5
   cmd: "test_getsiblings 0"
-  note: "[getsiblings] getsiblings failed for zero siblings"
+  expect: ""
+  note: "[getsiblings] getsiblings failed on returning zero siblings"
   name: "getsiblings - zero siblings"
 """
 
 rubrics_part234 = r"""
-- points: 12.5
-  cmd: "test_part34 1"
-  expect: "4 0"
-  note: "Fork failed"
-  name: "Exit & Wait - Fork first child process"
+- points: 30
+  cmd: "test_exit_wait 1"
+  expect: "1\n42\n-1\n0"
+  note: "[exit and wait] first test for exit and wait failed"
+  name: "exit and wait - first test"
 
-- points: 12.5
-  expect: "4+0"
-  note: "[Exit & Wait]Failed to obtain correct first child process exit status"
-  name: "Exit & Wait - Wait for first child process"
+- points: 30
+  cmd: "test_exit_wait 2"
+  expect: "-1\n1\n1\n0\n0\n0"
+  note: "[exit and wait] second test for exit and wait failed"
+  name: "exit and wait - second test"
+"""
 
-- points: 12.5
-  expect: "5 -1"
-  note: "[Exit & Wait]Fork second child process failed"
-  name: "Exit & Wait - Fork second child process"
-
-- points: 12.5
-  expect: "5+-1"
-  note: "[Exit & Wait]Failed to obtain correct second child process exit status"
-  name: "Exit & Wait - Wait for second child process"
-
-- points: 0
-  cmd: "test_part34 2"
-  expect: "12 16"
-  note: "[Waitpid]Failed to create 6 child processes"
-  name: "Waitpid - create 6 child processes"
-
-- points: 5
-  expect: "10\n10+14+14\n8\n8+12+12\n9\n9+13+13\n7\n7+11+11\n11\n11+15+15"
-  note: "[Waitpid]Child process exit status is incorrect"
-  name: "Waitpid - check 5 child processes exit status"
-
-- points: 5
-  expect: "12\n-1+12+-1"
-  note: "[Waitpid]Syscall does not return -1 while obtaining status of an process that's not a child of the current process"
-  name: "Waitpid - check invalid process"
-
-- points: 5
-  expect: "-1"
-  note: "[Waitpid]Syscall does not return -1 while obtaining status of an invalid process"
-  name: "Waitpid - check invalid process"
-
-- points: 5
-  expect: "-1"
-  note : "[Waitpid]Syscall does not return -1 when an invalid argument is given"
-  name: "Waitpid - check invalid argument"
-
-- points: 5
-  cmd: "test_part34 3"
-  expect: "-1 -1"
-  note: "[Exit & Wait]Should return -1 for a child process that does not exist"
-  name: "Exit & Wait - Wait for a child process that does not exist"
-
+rubrics_part5 = r"""
+- points: 15
+  cmd: "test_waitpid"
+  expect: "0\n1\n-1"
+  note: "[waitpid] test for waitpid failed"
+  name: "waitpid - test"
 """
 
 code_test_part1 = """I2luY2x1ZGUgInR5cGVzLmgiCiNpbmNsdWRlICJ1c2VyLmgiCgppbnQgdGVzdF90d29fc2licygpIHsKICAgIGludCB3YWl0X3N0YXR1czsKCiAgICBpbnQgY2hpbGQxX3BpZCA9IGZvcmsoKTsgICAgCiAgICBpZiAoY2hpbGQxX3BpZCA9PSAwKSB7ICAgICAgICAgIAogICAgICAgIHNsZWVwKDEwMCk7ICAgICAgICAgICAgIAogICAgICAgIGdldHNpYmxpbmdzKCk7ICAgICAgICAgIAogICAgICAgIGV4aXQoMCk7ICAgICAgICAgICAgICAgIAogICAgfQoKICAgIGludCBjaGlsZDJfcGlkID0gZm9yaygpOwogICAgaWYgKGNoaWxkMl9waWQgPT0gMCkgewogICAgICAgIHNsZWVwKDEwMCk7CiAgICAgICAgZXhpdCgwKTsgICAgICAgICAgICAgICAgCiAgICB9CgogICAgaW50IGNoaWxkM19waWQgPSBmb3JrKCk7CiAgICBpZiAoY2hpbGQzX3BpZCA9PSAwKSB7CiAgICAgICAgc2xlZXAoMTAwKTsKICAgICAgICBleGl0KDApOyAgICAgICAgICAgICAgICAKICAgIH0KCiAgICB3YWl0KCZ3YWl0X3N0YXR1cyk7ICAgICAgICAgCiAgICB3YWl0KCZ3YWl0X3N0YXR1cyk7ICAgICAgICAgCiAgICB3YWl0KCZ3YWl0X3N0YXR1cyk7ICAgICAgICAKCiAgICBleGl0KDApOyAgICAgICAgICAgICAgICAgICAgCn0KCmludCB0ZXN0X29uZV9zaWJzKCkgewogICAgaW50IHdhaXRfc3RhdHVzOwoKICAgIGludCBjaGlsZF9waWQgPSBmb3JrKCk7ICAgIAogICAgaWYgKGNoaWxkX3BpZCA9PSAwKSB7ICAgICAgICAgIAogICAgICAgIHNsZWVwKDEwMCk7ICAgCgogICAgICAgIGludCBjaGlsZF9jaGlsZDFfcGlkID0gZm9yaygpOyAKICAgICAgICBpZiAoY2hpbGRfY2hpbGQxX3BpZCA9PSAwKSB7CiAgICAgICAgICAgIHNsZWVwKDEwMCk7CiAgICAgICAgICAgIGdldHNpYmxpbmdzKCk7CiAgICAgICAgICAgIGV4aXQoMCk7ICAgICAgICAgICAgICAgIAogICAgICAgIH0gCgogICAgICAgIGludCBjaGlsZF9jaGlsZDJfcGlkID0gZm9yaygpOwogICAgICAgIGlmIChjaGlsZF9jaGlsZDJfcGlkID09IDApIHsKICAgICAgICAgICAgc2xlZXAoMTAwKTsKICAgICAgICAgICAgZXhpdCgwKTsgICAgICAgICAgICAgICAgCiAgICAgICAgfSAgICAgICAgCiAgICAgICAgCiAgICAgICAgd2FpdCgmd2FpdF9zdGF0dXMpOyAgICAgICAgIAogICAgICAgIHdhaXQoJndhaXRfc3RhdHVzKTsgICAgICAgICAKICAgICAgICBleGl0KDApOyAgICAgICAgICAgICAgICAKICAgIH0KCiAgICB3YWl0KCZ3YWl0X3N0YXR1cyk7ICAgICAgICAKICAgIGV4aXQoMCk7ICAKfQoKaW50IHRlc3RfemVyb19zaWJzKCkgewogICAgaW50IHdhaXRfc3RhdHVzOwoKICAgIGludCBjaGlsZF9waWQgPSBmb3JrKCk7ICAgIAogICAgaWYgKGNoaWxkX3BpZCA9PSAwKSB7ICAgICAgICAgIAogICAgICAgIHNsZWVwKDEwMCk7ICAgCgogICAgICAgIGludCBjaGlsZF9jaGlsZDFfcGlkID0gZm9yaygpOyAKICAgICAgICBpZiAoY2hpbGRfY2hpbGQxX3BpZCA9PSAwKSB7CiAgICAgICAgICAgIHNsZWVwKDEwMCk7CgogICAgICAgICAgICBpbnQgY2hpbGRfY2hpbGRfY2hpbGQxX3BpZCA9IGZvcmsoKTsKICAgICAgICAgICAgaWYgKGNoaWxkX2NoaWxkX2NoaWxkMV9waWQgPT0gMCkgewogICAgICAgICAgICAgICAgc2xlZXAoMTAwKTsKICAgICAgICAgICAgICAgIGdldHNpYmxpbmdzKCk7CiAgICAgICAgICAgICAgICBleGl0KDApOyAgICAgICAgICAgICAgICAKICAgICAgICAgICAgfSAgICAgICAKICAgICAgICAgICAgCiAgICAgICAgICAgIHdhaXQoJndhaXRfc3RhdHVzKTsKICAgICAgICAgICAgZXhpdCgwKTsgICAgICAgICAgICAgICAgCiAgICAgICAgfSAKCiAgICAgICAgd2FpdCgmd2FpdF9zdGF0dXMpOyAgICAgICAgIAogICAgICAgIGV4aXQoMCk7ICAgICAgICAgICAgICAgIAogICAgfQoKICAgIHdhaXQoJndhaXRfc3RhdHVzKTsgICAgICAgIAogICAgZXhpdCgwKTsgICAKfQoKaW50IG1haW4oaW50IGFyZ2MsIGNoYXIgKmFyZ3ZbXSkgewogICAgaWYgKGF0b2koYXJndlsxXSkgPT0gMikgewogICAgICAgIHRlc3RfdHdvX3NpYnMoKTsgIAogICAgfSBlbHNlIGlmIChhdG9pKGFyZ3ZbMV0pID09IDEpIHsKICAgICAgICB0ZXN0X29uZV9zaWJzKCk7CiAgICB9IGVsc2UgaWYgKGF0b2koYXJndlsxXSkgPT0gMCkgewogICAgICAgIHRlc3RfemVyb19zaWJzKCk7IAogICAgfSBlbHNlIHsKICAgICAgICBwcmludGYoMSwgIlRoZSBhcmd1bWVudCBpcyBub3QgY29ycmVjdCFcbiIpOwogICAgICAgIHJldHVybiAtMTsKICAgIH0KCiAgICByZXR1cm4gMDsKfQo="""
 
-code_test_part34 = """"I2luY2x1ZGUgInR5cGVzLmgiCiNpbmNsdWRlICJ1c2VyLmgiCgppbnQgbWFpbihpbnQgYXJnYywgY2hhciAqYXJndltdKQp7CiAgICBpbnQgZXhpdFdhaXQodm9pZCk7CiAgICBpbnQgd2FpdE5vdGhpbmcodm9pZCk7CgogICAgcHJpbnRmKDEsICJcbmxhYiMxXG4iKTsKICAgIGlmIChhdG9pKGFyZ3ZbMV0pID09IDEpCiAgICAgICAgZXhpdFdhaXQoKTsgIAogICAgZWxzZSBpZiAoYXRvaShhcmd2WzFdKSA9PSAyKQogICAgICAgIHdhaXROb3RoaW5nKCk7CiAgICAvLyBFbmQgb2YgdGVzdAogICAgLy8gZXhpdCgwKTsKICAgIHJldHVybiAwOwp9CgoKaW50IHdhaXROb3RoaW5nKHZvaWQpewogICAgaW50IHJldCwgZXhpdF9zdGF0dXMgPSAtMTsKICAgIHJldCA9IHdhaXQoJmV4aXRfc3RhdHVzKTsKICAgIHByaW50ZigxLCAiJWQgJWRcbiIsIHJldCwgZXhpdF9zdGF0dXMpOwogICAgcmV0dXJuIDA7Cn0KCmludCBleGl0V2FpdCh2b2lkKSB7CiAgICBpbnQgcGlkLCByZXRfcGlkLCBleGl0X3N0YXR1czsKICAgIGludCBpOwoKICAgIGZvciAoaSA9IDA7IGkgPCAyOyBpKyspIHsKICAgICAgICBwaWQgPSBmb3JrKCk7CiAgICAgICAgaWYgKHBpZCA9PSAwKSB7IC8vIG9ubHkgdGhlIGNoaWxkIGV4ZWN1dGVkIHRoaXMgY29kZQogICAgICAgICAgICBpZiAoaSA9PSAwKXsKICAgICAgICAgICAgICAgIHByaW50ZigxLCAiJWQgJWRcbiIsIGdldHBpZCgpLCAwKTsKICAgICAgICAgICAgICAgIGV4aXQoMCk7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgZWxzZXsKICAgICAgICAgICAgICAgIHByaW50ZigxLCAiJWQgJWRcbiIgLGdldHBpZCgpLCAtMSk7CiAgICAgICAgICAgICAgICBleGl0KC0xKTsKICAgICAgICAgICAgfSAKICAgICAgICB9IGVsc2UgaWYgKHBpZCA+IDApIHsgLy8gb25seSB0aGUgcGFyZW50IGV4ZWN1dGVzIHRoaXMgY29kZQogICAgICAgICAgICByZXRfcGlkID0gd2FpdCgmZXhpdF9zdGF0dXMpOwogICAgICAgICAgICBwcmludGYoMSwgIiVkKyVkXG4iLCByZXRfcGlkLCBleGl0X3N0YXR1cyk7CiAgICAgICAgfSBlbHNlIHsgLy8gc29tZXRoaW5nIHdlbnQgd3Jvbmcgd2l0aCBmb3JrIHN5c3RlbSBjYWxsCiAgICAgICAgICAgIHByaW50ZigyLCAiXG5FcnJvciB1c2luZyBmb3JrXG4iKTsKICAgICAgICAgICAgZXhpdCgtMSk7CiAgICAgICAgfQogICAgfQogICAgcmV0dXJuIDA7Cn0="""
+code_test_part234 = """I2luY2x1ZGUgInR5cGVzLmgiCiNpbmNsdWRlICJzdGF0LmgiCiNpbmNsdWRlICJ1c2VyLmgiCgp2b2lkIHRlc3Rfc2ltcGxlX2V4aXRfd2FpdChpbnQgc3RhdHVzKSB7CiAgICBpbnQgcGlkID0gZm9yaygpOwogICAgaWYgKHBpZCA8IDApIHsKICAgICAgICBwcmludGYoMSwgIkZvcmsgZmFpbGVkIVxuIik7CiAgICAgICAgZXhpdCgtMSk7CiAgICB9CiAgICBpZiAocGlkID09IDApIHsKICAgICAgICBleGl0KHN0YXR1cyk7CiAgICB9IGVsc2UgewogICAgICAgIGludCB3YWl0X3N0YXR1czsKICAgICAgICBpbnQgd2FpdF9waWQgPSB3YWl0KCZ3YWl0X3N0YXR1cyk7CiAgICAgICAgaWYgKHdhaXRfcGlkID09IC0xKSB7CiAgICAgICAgICAgIHByaW50ZigxLCAiV2FpdCBmYWlsZWQhXG4iKTsKICAgICAgICB9IGVsc2UgewogICAgICAgICAgICBpZiAod2FpdF9zdGF0dXMgPT0gc3RhdHVzKSB7CiAgICAgICAgICAgICAgICBwcmludGYoMSwgIiVkXG4iLCB3YWl0X3N0YXR1cyk7CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICB9Cn0KCnZvaWQgdGVzdF9tb3JlX2V4aXRfd2FpdChpbnQgY2gxX3N0YXR1cywgaW50IGNoMl9zdGF0dXMpIHsKICAgIGludCBjaDFfcGlkID0gZm9yaygpOwogICAgaWYgKGNoMV9waWQgPCAwKSB7CiAgICAgICAgcHJpbnRmKDEsICJGb3JrIGZhaWxlZCFcbiIpOwogICAgICAgIGV4aXQoLTEpOwogICAgfQogICAgaWYgKGNoMV9waWQgPT0gMCkgewogICAgICAgIGludCBjaDJfcGlkID0gZm9yaygpOwogICAgICAgIGlmIChjaDJfcGlkIDwgMCkgewogICAgICAgICAgICBwcmludGYoMSwgIkZvcmsgZmFpbGVkIVxuIik7CiAgICAgICAgICAgIGV4aXQoLTEpOwogICAgICAgIH0KICAgICAgICBpZiAoY2gyX3BpZCA9PSAwKSB7CiAgICAgICAgICAgIC8vIHNsZWVwKDEwMCk7CiAgICAgICAgICAgIGV4aXQoY2gyX3N0YXR1cyk7CiAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgaW50IGNoMl93YWl0X3N0YXR1czsKICAgICAgICAgICAgaW50IGNoMl93YWl0X3BpZCA9IHdhaXQoJmNoMl93YWl0X3N0YXR1cyk7CiAgICAgICAgICAgIGlmIChjaDJfd2FpdF9waWQgPT0gLTEpIHsKICAgICAgICAgICAgICAgIHByaW50ZigxLCAiV2FpdCBmYWlsZWQhXG4iKTsKICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgIGlmIChjaDJfd2FpdF9zdGF0dXMgPT0gY2gyX3N0YXR1cykgewogICAgICAgICAgICAgICAgICAgIHByaW50ZigxLCAiJWRcbiIsIGNoMl93YWl0X3N0YXR1cyk7CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICB9IAogICAgICAgIGV4aXQoY2gxX3N0YXR1cyk7CiAgICB9IGVsc2UgewogICAgICAgIGludCBjaDFfd2FpdF9zdGF0dXM7CiAgICAgICAgaW50IGNoMV93YWl0X3BpZCA9IHdhaXQoJmNoMV93YWl0X3N0YXR1cyk7CiAgICAgICAgaWYgKGNoMV93YWl0X3BpZCA9PSAtMSkgewogICAgICAgICAgICBwcmludGYoMSwgIldhaXQgZmFpbGVkIVxuIik7CiAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgaWYgKGNoMV93YWl0X3N0YXR1cyA9PSBjaDFfc3RhdHVzKSB7CiAgICAgICAgICAgICAgICBwcmludGYoMSwgIiVkXG4iLCBjaDFfd2FpdF9zdGF0dXMpOwogICAgICAgICAgICB9CiAgICAgICAgfQogICAgfQp9Cgp2b2lkIGZpcnN0X3Rlc3QoKSB7CiAgICAvLyBUZXN0IGNhc2VzIHdpdGggZGlmZmVyZW50IGV4aXQgc3RhdHVzZXMKICAgIHRlc3Rfc2ltcGxlX2V4aXRfd2FpdCgxKTsgICAvLyBFeGl0IHdpdGggc3RhdHVzIDEKICAgIHRlc3Rfc2ltcGxlX2V4aXRfd2FpdCg0Mik7ICAvLyBFeGl0IHdpdGggc3RhdHVzIDQyCiAgICB0ZXN0X3NpbXBsZV9leGl0X3dhaXQoLTEpOyAgLy8gRXhpdCB3aXRoIHN0YXR1cyAtMQogICAgdGVzdF9zaW1wbGVfZXhpdF93YWl0KDApOyAgIC8vIE5vcm1hbCBleGl0CgogICAgZXhpdCgwKTsKfQoKdm9pZCBzZWNvbmRfdGVzdCgpIHsKICAgdGVzdF9tb3JlX2V4aXRfd2FpdCgxLCAtMSk7IAogICB0ZXN0X21vcmVfZXhpdF93YWl0KDAsIDEpOyAKICAgdGVzdF9tb3JlX2V4aXRfd2FpdCgwLCAwKTsgICAvLyBCb3RoIGV4aXQgbm9ybWFsbHkKCiAgIGV4aXQoMCk7Cn0KCmludCBtYWluKGludCBhcmdjLCBjaGFyKiBhcmd2W10pIHsKICAgIGlmIChhdG9pKGFyZ3ZbMV0pID09IDEpIHsKICAgICAgICBmaXJzdF90ZXN0KCk7ICAKICAgIH0gZWxzZSBpZiAoYXRvaShhcmd2WzFdKSA9PSAyKSB7CiAgICAgICAgc2Vjb25kX3Rlc3QoKTsKICAgIH0gZWxzZSB7CiAgICAgICAgcHJpbnRmKDEsICJUaGUgYXJndW1lbnQgaXMgbm90IGNvcnJlY3QhXG4iKTsKICAgICAgICByZXR1cm4gLTE7CiAgICB9CiAgICAKICAgIHJldHVybiAwOwp9"""
+
+code_test_part5 = """I2luY2x1ZGUgInR5cGVzLmgiCiNpbmNsdWRlICJzdGF0LmgiCiNpbmNsdWRlICJ1c2VyLmgiCgppbnQgbWFpbih2b2lkKSB7CiAgICBpbnQgY2hpbGQxX3N0YXR1czsKICAgIGludCBjaGlsZDJfc3RhdHVzOwogICAgaW50IGNoaWxkM19zdGF0dXM7CgogICAgaW50IGNoaWxkMV9waWQgPSBmb3JrKCk7CiAgICBpZiAoY2hpbGQxX3BpZCA8IDApIHsKICAgICAgICBwcmludGYoMSwgIkZvcmsgZmFpbGVkXG4iKTsKICAgICAgICBleGl0KC0xKTsKICAgIH0KCiAgICBpZiAoY2hpbGQxX3BpZCA9PSAwKSB7CiAgICAgICAgLy8gc2xlZXAoMTAwKTsKICAgICAgICBleGl0KDApOyAKICAgIH0KCiAgICBpbnQgY2hpbGQyX3BpZCA9IGZvcmsoKTsKICAgIGlmIChjaGlsZDJfcGlkIDwgMCkgewogICAgICAgIHByaW50ZigxLCAiRm9yayBmYWlsZWRcbiIpOwogICAgICAgIGV4aXQoLTEpOwogICAgfQoKICAgIGlmIChjaGlsZDJfcGlkID09IDApIHsKICAgICAgICAvLyBzbGVlcCgxMDApOwogICAgICAgIGV4aXQoMSk7IAogICAgfQoKICAgIGludCBjaGlsZDNfcGlkID0gZm9yaygpOwogICAgaWYgKGNoaWxkM19waWQgPCAwKSB7CiAgICAgICAgcHJpbnRmKDEsICJGb3JrIGZhaWxlZFxuIik7CiAgICAgICAgZXhpdCgtMSk7CiAgICB9IAoKICAgIGlmIChjaGlsZDNfcGlkID09IDApIHsKICAgICAgICAvLyBzbGVlcCgxMDApOwogICAgICAgIGV4aXQoLTEpOyAKICAgIH0KCiAgICAvLyBQYXJlbnQgcHJvY2VzcyB3YWl0cyBmb3Igc3BlY2lmaWMgY2hpbGQgcHJvY2Vzc2VzCiAgICB3YWl0cGlkKGNoaWxkMV9waWQsICZjaGlsZDFfc3RhdHVzKTsgLy8gV2FpdCBmb3IgY2hpbGQgMQogICAgd2FpdHBpZChjaGlsZDJfcGlkLCAmY2hpbGQyX3N0YXR1cyk7IC8vIFdhaXQgZm9yIGNoaWxkIDIKICAgIHdhaXRwaWQoY2hpbGQzX3BpZCwgJmNoaWxkM19zdGF0dXMpOyAvLyBXYWl0IGZvciBjaGlsZCAzCgogICAgcHJpbnRmKDEsICIlZCAlZCAlZFxuIiwgY2hpbGQxX3N0YXR1cywgY2hpbGQyX3N0YXR1cywgY2hpbGQzX3N0YXR1cyk7CgogICAgZXhpdCgwKTsKfQ=="""
 
 def populate_makefile(filename):
     c = open('Makefile', 'r').read().replace(" -Werror", " ")
@@ -129,7 +86,7 @@ def run_test(code, program, rubrics, points):
         try:
             if "cmd" in rubric:
                 p.sendline(rubric["cmd"].encode())
-            recv = p.recvuntil(rubric["expect"].encode(), timeout=2).decode('latin-1')
+            recv = p.recvuntil(rubric["expect"].encode(), timeout=20).decode('latin-1')
             if rubric["expect"] not in recv:
                 raise Exception("Wrong output")
             points += rubric["points"]
@@ -153,5 +110,9 @@ def run_test(code, program, rubrics, points):
 
     return points
 
-point1 = run_test(code_test_part1, "test_getsiblings", rubrics_part1, 25)
-# point34 = run_test(code_test_part34, "lab1_part34", rubrics_part34, 0)
+point1 = run_test(code_test_part1, "test_getsiblings", rubrics_part1, 0)
+print(f"---> Your total score: {point1} / 100")
+point234 = run_test(code_test_part234, "test_exit_wait", rubrics_part234, 0)
+print(f"---> Your total score: {point1 + point234} / 100")
+point5 = run_test(code_test_part5, "test_waitpid", rubrics_part5, 0)
+print(f"---> Your total score: {point1 + point234 + point5} / 100")
